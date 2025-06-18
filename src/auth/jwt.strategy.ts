@@ -15,6 +15,6 @@ constructor() {
 }
 
 async validate(payload: any) {
-    return { userId: payload.sub, email: payload.email };
+    return { id: payload.id, email: payload.email };
 }
 }

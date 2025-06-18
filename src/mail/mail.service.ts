@@ -23,9 +23,9 @@ export class MailService {
       from: `MTOS Sports Fantasy ${process.env.SMTP_USER}`,
       to,
       subject: 'Your OTP Code',
-      text: `Your OTP code is: ${otp}. It will expire in 5 minutes.`,
+      text: `Your OTP code is: ${otp}. It will expire in 2 minutes.`,
     });
-
+    console.log("your email OTP is",otp);
     console.log('Message sent: %s', info.messageId);
   }
 }

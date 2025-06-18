@@ -7,6 +7,7 @@ import { UserModule } from './user/user.module';
 import { DatabaseService } from './database/database.service';
 import { MailService } from './mail/mail.service';
 import { ConfigModule } from '@nestjs/config';
+import { GamesModule } from './games/games.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { ConfigModule } from '@nestjs/config';
     }),
     AuthModule,
     UserModule,
+    GamesModule,
   ],
   controllers: [AppController],
   providers: [AppService,DatabaseService, MailService],

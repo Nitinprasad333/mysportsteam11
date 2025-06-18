@@ -1,4 +1,3 @@
-// src/user/entities/user.entity.ts
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 @Entity()
@@ -23,4 +22,7 @@ export class User {
 
   @Column({ type: 'timestamp', nullable: true })
   otpExpiresAt?: Date ;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  refreshToken?: string;
 }

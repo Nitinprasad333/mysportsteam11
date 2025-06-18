@@ -2,6 +2,7 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -24,6 +25,12 @@ async sendOtp(@Body('email') email: string) {
 async verifyOtp(@Body() body: { email: string; otp: string }) {
     const response = await this.authService.verifyOtp(body.email, body.otp);
 return response;
+}
+
+
+@Post('refresh-token')
+async refresh(@Body() dto: RefreshTokenDto) {
+  return this.authService.refreshToken(dto.refresh_token);
 }
 
 
