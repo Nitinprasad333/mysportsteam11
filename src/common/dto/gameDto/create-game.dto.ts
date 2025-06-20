@@ -1,7 +1,12 @@
-import { IsString } from 'class-validator';
+import { IsString,IsNotEmpty } from 'class-validator';
 
 export class CreateGameDto {
-  @IsString()
+
+ @IsNotEmpty({ message: 'Name is required' })
+  @IsString({ message: 'Name must be a string' })
     name: string;
-  description?: string;
+
+
+  @IsString()
+  description: string;
 }

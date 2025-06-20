@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column,CreateDateColumn,UpdateDateColumn } from 'typeorm';
 
 @Entity()
 export class Game {
@@ -10,4 +10,10 @@ export class Game {
 
   @Column({ type: 'text', nullable: true })
   description: string;
+
+      @CreateDateColumn()
+    createdAt: Date;
+  
+    @UpdateDateColumn()
+    updatedAt: Date;
 }

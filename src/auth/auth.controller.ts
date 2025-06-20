@@ -21,6 +21,13 @@ async sendOtp(@Body('email') email: string) {
   return response;
 }
 
+@Post('resend-otp')
+async resendOtp(@Body('email') email: string) {
+  const response = await this.authService.resendOtp(email);
+  console.log("resendOtp response", response);
+  return response;
+}
+
 @Post('verify-otp')
 async verifyOtp(@Body() body: { email: string; otp: string }) {
     const response = await this.authService.verifyOtp(body.email, body.otp);

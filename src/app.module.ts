@@ -12,12 +12,12 @@ import { GamesModule } from './games/games.module';
 @Module({
   imports: [
         ConfigModule.forRoot({
-      isGlobal: true, // loads .env automatically
+      isGlobal: true, 
     }),
     TypeOrmModule.forRoot({
-      type: 'mysql', // or 'mysql'
+      type: 'mysql', 
       host: process.env.SQL_HOST,
-      port: Number(process.env.SQL_PORT), // change to 3306 for MySQL
+      port: Number(process.env.SQL_PORT),
       username: process.env.SQL_USER_NAME,
       password: process.env.SQL_DB_PASSWORD,
       database: process.env.SQL_DATABASE,

@@ -53,7 +53,7 @@ async findAll(
   async remove(id: string): Promise<void> {
     const result = await this.gamesRepository.delete(id);
     if (result.affected === 0) {
-      throw new NotFoundException(`Game with id ${id} not found`);
+      throw new NotFoundException(`Game not found`);
     }
   }
 }

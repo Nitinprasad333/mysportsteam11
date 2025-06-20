@@ -7,7 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UserService } from '../user/user.service';
-import { randomInt } from 'crypto'; 
+import { randomInt } from 'crypto';
 import { MailService } from 'src/mail/mail.service';
 
 @Injectable()
@@ -26,8 +26,13 @@ export class AuthService {
     mobile: string;
   }) {
     const existingUser = await this.userService.findByEmail(data.email);
+    const existingMobile = await this.userService.findByMobile(data.mobile);
     if (existingUser) {
-      throw new BadRequestException('Email already exists');
+      throw new BadRequestException('Email already exists with user');
+    }
+
+    if (existingMobile) {
+      throw new BadRequestException('Mobile number already exists with user');
     }
 
     return this.userService.create(data);
@@ -49,12 +54,13 @@ export class AuthService {
     // Save otp and expiry in user record
     user.otp = otp;
     user.otpExpiresAt = otpExpiresAt;
-    await this.userService.update(user.id, user);
+    await this.userService.update(user.id, {
+      otp: otp,
+      otpExpiresAt: otpExpiresAt.toISOString(),
+    });
 
-    // TODO: Send otp via email here
-    // You can integrate with nodemailer, SendGrid, or any email provider
-
-    console.log(`OTP for ${email}: ${otp}`); // For dev/testing
+    
+    console.log(`OTP for ${email}: ${otp}`); 
     await this.mailService.sendOtpEmail(email, otp);
 
     return {
@@ -94,64 +100,93 @@ export class AuthService {
     // Create JWT payload and return token
     const payload = { id: user.id, email: user.email };
 
-const accessToken = this.jwtService.sign(payload);
+    const accessToken = this.jwtService.sign(payload);
 
-const refreshToken = this.jwtService.sign(payload, {
-  expiresIn: process.env.JWT_EXPIRES_IN,
-});
+    const refreshToken = this.jwtService.sign(payload, {
+      expiresIn: process.env.JWT_EXPIRES_IN,
+    });
 
-await this.userService.updateRefreshToken(user.id, refreshToken);
-   return {
-  statusCode: 200,
-  message: 'OTP verified successfully',
-  data: {
-    access_token: accessToken,
-    refresh_token: refreshToken,
-  },
-};
+    await this.userService.updateRefreshToken(user.id, refreshToken);
+    return {
+      statusCode: 200,
+      message: 'OTP verified successfully',
+      data: {
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      },
+    };
   }
 
+  async refreshToken(oldToken: string) {
+    try {
+      const payload = this.jwtService.verify(oldToken);
+      const user = await this.userService.findByEmail(payload.email);
 
-async refreshToken(oldToken: string) {
-  try {
-    const payload = this.jwtService.verify(oldToken);
-    const user = await this.userService.findByEmail(payload.email);
+      if (!user || !user.refreshToken) {
+        throw new UnauthorizedException('Access denied');
+      }
 
-    if (!user || !user.refreshToken) {
-      throw new UnauthorizedException('Access denied');
+      const tokenMatch = await bcrypt.compare(oldToken, user.refreshToken);
+      if (!tokenMatch) {
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      const newAccessToken = this.jwtService.sign({
+        id: user.id,
+        email: user.email,
+      });
+
+      const newRefreshToken = this.jwtService.sign(
+        { id: user.id, email: user.email },
+        { expiresIn: process.env.JWT_EXPIRES_IN },
+      );
+
+      await this.userService.updateRefreshToken(user.id, newRefreshToken);
+
+      return {
+        statusCode: 200,
+        message: 'Token refreshed',
+        data: {
+          access_token: newAccessToken,
+          refresh_token: newRefreshToken,
+        },
+      };
+    } catch (err) {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+  }
+
+  async resendOtp(email: string) {
+    const user = await this.userService.findByEmail(email);
+    if (!user) {
+      throw new NotFoundException('User not found');
     }
 
-    const tokenMatch = await bcrypt.compare(oldToken, user.refreshToken);
-    if (!tokenMatch) {
-      throw new UnauthorizedException('Invalid refresh token');
-    }
+    // Generate 6-digit OTP
+    const otp = randomInt(100000, 999999).toString();
 
-    const newAccessToken = this.jwtService.sign(
-      { id: user.id, email: user.email },
-    );
+    // Set expiry 2 minutes from now
+    const otpExpiresAt = new Date(Date.now() + 2 * 60 * 1000);
 
-    const newRefreshToken = this.jwtService.sign(
-      { id: user.id, email: user.email },
-      { expiresIn: process.env.JWT_EXPIRES_IN },
-    );
+    // Save otp and expiry in user record
+    user.otp = otp;
+    user.otpExpiresAt = otpExpiresAt;
+    await this.userService.update(user.id, {
+      otp: otp,
+      otpExpiresAt: otpExpiresAt.toISOString(),
+    });
 
-    await this.userService.updateRefreshToken(user.id, newRefreshToken);
+    // TODO: ReSend otp via email here
+  
+    console.log(`Resend OTP for ${email}: ${otp}`); 
+    await this.mailService.sendOtpEmail(email, otp);
 
     return {
       statusCode: 200,
-      message: 'Token refreshed',
+      message: 'OTP resent on email address',
       data: {
-        access_token: newAccessToken,
-        refresh_token: newRefreshToken,
+        email: email,
       },
     };
-  } catch (err) {
-    throw new UnauthorizedException('Invalid or expired token');
   }
-}
-
-
-
-
-
 }
