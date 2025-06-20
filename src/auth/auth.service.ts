@@ -189,4 +189,67 @@ export class AuthService {
       },
     };
   }
+
+
+
+async sendOtpAutoRegister(identifier: { email?: string; mobile?: string }) {
+  const { email, mobile } = identifier;
+
+  // Ensure at least one identifier is provided
+  if (!email && !mobile) {
+    throw new BadRequestException('Either email or mobile number is required');
+  }
+
+  let user: any = null;
+  let isUser = false;
+
+  // Check for existing user
+  if (email) {
+    user = await this.userService.findByEmail(email);
+  } else if (mobile) {
+    user = await this.userService.findByMobile(mobile);
+  }
+
+  if (user) {
+    isUser = true;
+  } else {
+    // Create user with provided info
+    user = await this.userService.create({
+
+      email: email || '',
+      mobile: mobile || '',
+    });
+  }
+
+  // Generate OTP
+  const otp = randomInt(1000, 9999).toString();
+  const otpExpiresAt = new Date(Date.now() + 2 * 60 * 1000);
+
+  // Save OTP to user
+  await this.userService.update(user.id, {
+    otp,
+    otpExpiresAt: otpExpiresAt.toISOString(),
+  });
+
+  // Send OTP
+  if (email) {
+    await this.mailService.sendOtpEmail(email, otp);
+  } else if (mobile) {
+    //will Implement SMS service here
+    console.log(`Send SMS OTP to ${mobile}: ${otp}`);
+    // await this.smsService.sendOtp(mobile, otp); (if using Twilio, etc.)
+  }
+
+  return {
+    statusCode: 200,
+    message: `OTP sent on ${email ? 'email address' : 'mobile number'}`,
+    data: {
+      email: email || null,
+      mobile: mobile || null,
+      isUser,
+    },
+  };
+}
+
+
 }

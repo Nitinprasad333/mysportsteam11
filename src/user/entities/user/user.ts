@@ -12,13 +12,13 @@ export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({nullable: true })
   name: string;
 
   @Column({ unique: true })
   email: string;
 
-  @Column()
+  @Column({nullable: true })
   dob: string;
 
   @Column({ unique: true })

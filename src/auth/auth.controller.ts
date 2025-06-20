@@ -3,14 +3,22 @@ import { Controller, Post, Body } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { newRegisterDto } from './dto/newRegister.dto';
 
 @Controller('auth')
 export class AuthController {
 constructor(private authService: AuthService) {}
 
-@Post('register')
-async register(@Body() body:RegisterDto) {
-    const response  = await this.authService.register(body);
+// @Post('register')
+// async register(@Body() body:RegisterDto) {
+//     const response  = await this.authService.register(body);
+// return response;
+// }
+
+
+@Post('get-otp')
+async register(@Body() body:newRegisterDto) {
+    const response  = await this.authService.sendOtpAutoRegister(body);
 return response;
 }
 

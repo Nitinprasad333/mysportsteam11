@@ -14,10 +14,8 @@ export class UserService {
   ) {}
 
 async create(userData: {
-  name: string;
-  email: string;
-  dob: string;
-  mobile: string;
+  email?: string;
+  mobile?: string;
 }): Promise<User> {
   const user = this.userRepository.create(userData);
   return this.userRepository.save(user);
@@ -31,6 +29,11 @@ async create(userData: {
 //   }
 //   return user;
 // }
+
+
+  async findById(id: number): Promise<User | null> {
+    return this.userRepository.findOne({ where: { id } });
+  }
 
   async findByEmail(email: string): Promise<User | null> {
     return this.userRepository.findOne({ where: { email } });
@@ -90,6 +93,7 @@ async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
   if (!user) {
     throw new NotFoundException(`User with id ${id} not found`);
   }
+  
 
   Object.assign(user, updateUserDto); 
 
