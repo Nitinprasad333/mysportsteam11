@@ -67,6 +67,12 @@ async removeRefreshToken(id: number) {
 }
 
 
+
+async saveUser(user: User): Promise<User> {
+  return await this.userRepository.save(user);
+}
+
+
 async findAll(
   page: number,
   limit: number,
@@ -101,27 +107,16 @@ async remove(id: number): Promise<void> {
 
 
 
-async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
-  const user = await this.userRepository.findOne({ where: { id: +id } });
-
+async update(id: number, updateUserDto: Partial<UpdateUserDto>): Promise<User> {
+  const user = await this.userRepository.findOne({ where: { id } });
   if (!user) {
     throw new NotFoundException(`User with id ${id} not found`);
   }
 
-  // Prevent overwriting email/mobile with empty strings if they exist
-  if (user.email && (updateUserDto.email === '' || updateUserDto.email === null || updateUserDto.email === undefined)) {
-    delete updateUserDto.email;
-  }
-
-  if (user.mobile && (updateUserDto.mobile === '' || updateUserDto.mobile === null || updateUserDto.mobile === undefined)) {
-    delete updateUserDto.mobile;
-  }
-
-  // Assign remaining properties
   Object.assign(user, updateUserDto);
-
   return await this.userRepository.save(user);
 }
+
 
 
 

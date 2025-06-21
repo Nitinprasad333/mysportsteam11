@@ -1,10 +1,12 @@
 // src/auth/auth.controller.ts
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body,UseInterceptors } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { newRegisterDto } from './dto/newRegister.dto';
+import { ContentTypeInterceptor } from 'src/common/interceptors/content-type.interceptor';
 
+@UseInterceptors(ContentTypeInterceptor)
 @Controller('auth')
 export class AuthController {
 constructor(private authService: AuthService) {}

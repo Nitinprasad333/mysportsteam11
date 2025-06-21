@@ -14,6 +14,8 @@ import {
    UploadedFile,
    ParseIntPipe,
    NotFoundException,
+   UsePipes,
+   ValidationPipe,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { UserService } from './user.service';
@@ -25,16 +27,60 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { MultipartFormGuard } from 'src/common/multipart.form.guard';
+import { validate } from 'class-validator';
+import { SetNameDto } from 'src/common/dto/userDto/set-name.user.dto';
+import { ContentTypeInterceptor } from 'src/common/interceptors/content-type.interceptor';
+import { SkipContentTypeCheck } from 'src/common/utility/decorators/skip-content-type.decorator';
 
 
 const allowedImgTypes = ['image/jpeg', 'image/jpg', 'image/png'];
 
+@UseInterceptors(ContentTypeInterceptor)
 @Controller('users')
 export class UserController {
   private readonly logger = new Logger(UserController.name);
 
   constructor(private readonly userService: UserService) {}
 
+
+  //set user name by id
+  @UseGuards(AuthGuard('jwt'))
+@Patch(':id/setname')
+@UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
+async setName(
+  @Param('id', ParseIntPipe) id: number,
+  @Body() setNameDto: SetNameDto,
+): Promise<ApiResponse<any>> {
+  try {
+    const user = await this.userService.findById(id);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    user.name = setNameDto.name;
+    const updated = await this.userService.saveUser(user); // or reuse update()
+
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Name updated successfully',
+      data: plainToInstance(User, updated),
+    };
+  } catch (error) {
+    this.logger.error(`Error setting name for user ${id}`, error.stack);
+    throw new HttpException(
+      {
+        statusCode: error.status || HttpStatus.BAD_REQUEST,
+        message: error.message || 'Failed to update name',
+        error: error.name || 'UnknownError',
+      },
+      error.status || HttpStatus.BAD_REQUEST,
+    );
+  }
+}
+
+
+
+  //Get all users with pagination, sorting, and search
   @UseGuards(AuthGuard('jwt'))
   @Get()
   async findAll(
@@ -92,6 +138,9 @@ export class UserController {
     }
   }
 
+
+
+  //Delete user by id
   @UseGuards(AuthGuard('jwt'))
 @Delete(':id')
 async remove(@Param('id') id: number): Promise<ApiResponse<null>> {
@@ -118,9 +167,11 @@ async remove(@Param('id') id: number): Promise<ApiResponse<null>> {
 
 
 
-/*update user check auth guard with header multipart form data guard */ 
+/*update user check auth guard with header multipart form data guard and skip content-type*/ 
+@SkipContentTypeCheck()
   @UseGuards(AuthGuard('jwt'),MultipartFormGuard)
   @Patch(':id')
+    @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
   @UseInterceptors(
     FileInterceptor('profilePicture', {
       storage: diskStorage({
@@ -154,13 +205,26 @@ async remove(@Param('id') id: number): Promise<ApiResponse<null>> {
   )
 async update(
   @Param('id', ParseIntPipe) id: number,
+
   @UploadedFile() file: Express.Multer.File,
   @Body() body: any,
 ): Promise<ApiResponse<any>> {
   try {
     const updateUserDto: UpdateUserDto = plainToInstance(UpdateUserDto, body);
 
- 
+  const errors = await validate(updateUserDto, { whitelist: true, forbidNonWhitelisted: true });
+
+  if (errors.length > 0) {
+    const messages = errors.map(err => Object.values(err.constraints || {})).flat();
+    throw new HttpException(
+      {
+        statusCode: HttpStatus.BAD_REQUEST,
+        message: messages.join(', '),
+        error: 'ValidationError',
+      },
+      HttpStatus.BAD_REQUEST,
+    );
+  }
 
     if (file) {
       updateUserDto['profilePicture'] = `uploads/${file.filename}`;
@@ -194,13 +258,13 @@ async update(
       );
     }
 
-    // Clean up email/mobile before passing to service
-    if (updateUserDto.email?.trim() === '') {
-      delete updateUserDto.email;
-    }
-    if (updateUserDto.mobile?.trim() === '') {
-      delete updateUserDto.mobile;
-    }
+    // // Clean up email/mobile before passing to service
+    // if (updateUserDto.email?.trim() === '') {
+    //   delete updateUserDto.email;
+    // }
+    // if (updateUserDto.mobile?.trim() === '') {
+    //   delete updateUserDto.mobile;
+    // }
 
     const updatedUser = await this.userService.update(id, updateUserDto);
 

@@ -49,12 +49,13 @@ export class AuthService {
 
     // Generate 6-digit OTP
     const otp = randomInt(100000, 999999).toString();
+    const hashedOtp = await bcrypt.hash(otp, 10);
 
     // Set expiry 2 minutes from now
     const otpExpiresAt = new Date(Date.now() + 2 * 60 * 1000);
 
     // Save otp and expiry in user record
-    user.otp = otp;
+    user.otp = hashedOtp;
     user.otpExpiresAt = otpExpiresAt;
     await this.userService.update(user.id, {
       otp: otp,
@@ -75,49 +76,59 @@ export class AuthService {
   }
 
   //Verify OTP Service
-  async verifyOtp(email: string, otp: string) {
-    const user = await this.userService.findByEmail(email);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    if (!user.otp || !user.otpExpiresAt) {
-      throw new BadRequestException('OTP not requested');
-    }
-
-    if (user.otp !== otp) {
-      throw new UnauthorizedException('Invalid OTP');
-    }
-
-    if (user.otpExpiresAt < new Date()) {
-      throw new UnauthorizedException('OTP expired');
-    }
-
-    // Clear OTP after successful verification
-    await this.userService.update(user.id, {
-      otp: '',
-      otpExpiresAt: undefined,
-    });
-
-    // Create JWT payload and return token
-    const payload = { id: user.id, email: user.email };
-
-    const accessToken = this.jwtService.sign(payload);
-
-    const refreshToken = this.jwtService.sign(payload, {
-      expiresIn: process.env.JWT_EXPIRES_IN,
-    });
-
-    await this.userService.updateRefreshToken(user.id, refreshToken);
-    return {
-      statusCode: 200,
-      message: 'OTP verified successfully',
-      data: {
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      },
-    };
+async verifyOtp(email: string, otp: string) {
+  const user = await this.userService.findByEmail(email);
+  if (!user) {
+    throw new NotFoundException('User not found');
+    
   }
+
+   if (!user.name || user.name.trim() === '') {
+    throw new BadRequestException(
+      'You are a first-time user. Please update your name'
+    );
+  }
+
+  if (!user.otp || !user.otpExpiresAt) {
+    throw new BadRequestException('OTP not requested');
+  }
+
+  // Compare hashed OTP using bcrypt
+  const isOtpValid = await bcrypt.compare(otp, user.otp);
+  if (!isOtpValid) {
+    throw new UnauthorizedException('Invalid OTP');
+  }
+
+  if (new Date(user.otpExpiresAt) < new Date()) {
+    throw new UnauthorizedException('OTP expired');
+  }
+
+  // Clear OTP after successful verification
+  await this.userService.update(user.id, {
+    otp: '',
+    otpExpiresAt: undefined,
+  });
+
+  // Create JWT payload and return token
+  const payload = { id: user.id, email: user.email };
+
+  const accessToken = this.jwtService.sign(payload);
+
+  const refreshToken = this.jwtService.sign(payload, {
+    expiresIn: process.env.JWT_EXPIRES_IN,
+  });
+
+  await this.userService.updateRefreshToken(user.id, refreshToken);
+
+  return {
+    statusCode: 200,
+    message: 'OTP verified successfully',
+    data: {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    },
+  };
+}
 
   async refreshToken(oldToken: string) {
     try {
@@ -166,12 +177,13 @@ export class AuthService {
 
     // Generate 6-digit OTP
     const otp = randomInt(100000, 999999).toString();
+        const hashedOtp = await bcrypt.hash(otp, 10);
 
     // Set expiry 2 minutes from now
     const otpExpiresAt = new Date(Date.now() + 2 * 60 * 1000);
 
     // Save otp and expiry in user record
-    user.otp = otp;
+    user.otp = hashedOtp;
     user.otpExpiresAt = otpExpiresAt;
     await this.userService.update(user.id, {
       otp: otp,
@@ -188,6 +200,7 @@ export class AuthService {
       message: 'OTP resent on email address',
       data: {
         email: email,
+         user: plainToInstance(User, user)
       },
     };
   }
@@ -203,7 +216,9 @@ async sendOtpAutoRegister(identifier: { email?: string; mobile?: string }) {
   }
 
   let user: any = null;
-  let isUser = false;
+
+  
+
 
   // Check for existing user
   if (email) {
@@ -212,9 +227,7 @@ async sendOtpAutoRegister(identifier: { email?: string; mobile?: string }) {
     user = await this.userService.findByMobile(mobile);
   }
 
-  if (user) {
-    isUser = true;
-  } else {
+  else {
     // Create user with provided info
  const createPayload: any = {};
 if (email && email.trim()) createPayload.email = email.trim();
@@ -225,13 +238,15 @@ user = await this.userService.create(createPayload);
 
   // Generate OTP
   const otp = randomInt(1000, 9999).toString();
+  const hashedOtp = await bcrypt.hash(otp, 10);
   const otpExpiresAt = new Date(Date.now() + 2 * 60 * 1000);
 
   // Save OTP to user
   await this.userService.update(user.id, {
-    otp,
+   otp: hashedOtp,
     otpExpiresAt: otpExpiresAt.toISOString(),
   });
+  
 
   // Send OTP
   if (email) {
@@ -242,14 +257,19 @@ user = await this.userService.create(createPayload);
     // await this.smsService.sendOtp(mobile, otp); (if using Twilio, etc.)
   }
 
+
+  
+  const isUser = !!(user.name && user.name.trim() !== '');
+
+
+const transformedUser = plainToInstance(User, user);
+
   return {
     statusCode: 200,
     message: `OTP sent on ${email ? 'email address' : 'mobile number'}`,
     data: {
-      // email: email || null,
-      // mobile: mobile || null,
-      isUser,
-      user: plainToInstance(User, user),
+   isUser,
+      user: transformedUser,
    
     },
   };

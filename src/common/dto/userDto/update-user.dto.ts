@@ -1,62 +1,72 @@
-import { IsOptional, IsString, IsEmail, IsDateString,IsNotEmpty } from 'class-validator';
+import { IsString, IsEmail, IsDateString, IsNotEmpty,IsOptional } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { Expose } from 'class-transformer';
+
 
 export class UpdateUserDto {
-  @IsOptional()
-    @IsNotEmpty({ message: 'Name is required and cannot be empty' })
   @IsString()
-  name?: string;
+  @IsNotEmpty({ message: 'Name is required and cannot be empty or blank' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+   @Expose()
+  name: string;
 
-  @IsOptional()
-  @IsEmail()
-  email?: string;
+  @Expose()
+    get isUser(): boolean {
+    return !!(this.name && this.name.trim() !== '');
+  }
 
-  @IsOptional()
-  @IsDateString()
-  
-  dob?: string;
+  @IsEmail({}, { message: 'Email must be a valid email address' })
+  @IsNotEmpty({ message: 'Email is required and cannot be empty or blank' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+   @Expose()
+  email: string;
 
-  @IsOptional()
   @IsString()
-  profilePicture?: string;
+  @IsNotEmpty({ message: 'Mobile is required and cannot be empty or blank' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+   @Expose()
+  mobile: string;
 
-  @IsOptional()
+  @IsDateString({}, { message: 'Date of birth must be a valid date string' })
+   @Expose()
+  dob: string;
+
   @IsString()
-  mobile?: string;
-
-  @IsOptional()
-  @IsString()
-  otp?: string;
-
-  @IsOptional()
-  @IsDateString()
-  otpExpiresAt?: string;
-
-  @IsOptional()
-  @IsString()
-  refreshToken?: string;
-
-
-//   @IsOptional()
-//   @IsString()
-//   profilePicture?: string;
-
-
-    @IsOptional()
-  @IsString()
-  country?: string;
-
-
-    @IsOptional()
-  @IsString()
-  state?: string;
-
+   @Expose()
+  profilePicture: string;
 
   
-    @IsOptional()
-  @IsString()
-  address?: string;
-
   @IsOptional()
   @IsString()
-  bio?: string;
+  otp: string;
+
+  
+  @IsOptional()
+  @IsDateString()
+  otpExpiresAt: string;
+
+  
+  @IsOptional()
+  @IsString()
+  refreshToken: string;
+
+  
+  @IsOptional()
+  @IsString()
+   @Expose()
+  country: string;
+
+  
+  @IsOptional()
+  @IsString()
+   @Expose()
+  state: string;
+
+  @IsString()
+   @Expose()
+  address: string;
+
+  @IsString()
+   @Expose()
+  bio: string;
 }
