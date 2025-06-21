@@ -1,7 +1,8 @@
-import { IsOptional, IsString, IsEmail, IsDateString } from 'class-validator';
+import { IsOptional, IsString, IsEmail, IsDateString,IsNotEmpty } from 'class-validator';
 
 export class UpdateUserDto {
   @IsOptional()
+    @IsNotEmpty({ message: 'Name is required and cannot be empty' })
   @IsString()
   name?: string;
 
@@ -11,7 +12,12 @@ export class UpdateUserDto {
 
   @IsOptional()
   @IsDateString()
+  
   dob?: string;
+
+  @IsOptional()
+  @IsString()
+  profilePicture?: string;
 
   @IsOptional()
   @IsString()

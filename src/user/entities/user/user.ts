@@ -15,13 +15,13 @@ export class User {
   @Column({nullable: true })
   name: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true,nullable: true, })
   email: string;
 
   @Column({nullable: true })
   dob: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true,nullable: true, })
   mobile: string;
 
   @Column({ nullable: true })

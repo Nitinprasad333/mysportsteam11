@@ -152,65 +152,73 @@ async remove(@Param('id') id: number): Promise<ApiResponse<null>> {
       },
     }),
   )
-  async update(
-    @Param('id', ParseIntPipe) id: number,
-    @UploadedFile() file: Express.Multer.File,
-    @Body() body: any,
-  ): Promise<ApiResponse<any>> {
-    try {
-      const updateUserDto: UpdateUserDto = plainToInstance(UpdateUserDto, body);
+async update(
+  @Param('id', ParseIntPipe) id: number,
+  @UploadedFile() file: Express.Multer.File,
+  @Body() body: any,
+): Promise<ApiResponse<any>> {
+  try {
+    const updateUserDto: UpdateUserDto = plainToInstance(UpdateUserDto, body);
 
-      if (file) {
-        updateUserDto['profilePicture'] = `uploads/${file.filename}`;
-      }
+ 
 
+    if (file) {
+      updateUserDto['profilePicture'] = `uploads/${file.filename}`;
+    }
 
-  const userData = await this.userService.findById(id);
-if (!userData) {
-  throw new NotFoundException(`User with ID ${id} not found`);
-}
+    const userData = await this.userService.findById(id);
+    if (!userData) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
 
-//  Prevent updating email to null/blank if it already exists
-if (userData.email && (!body.email || body.email.trim() === '')) {
-  throw new HttpException(
-    {
-      statusCode: HttpStatus.BAD_REQUEST,
-      message: 'Email cannot be empty or null because it already exists.',
-      error: 'InvalidEmailUpdate',
-    },
-    HttpStatus.BAD_REQUEST,
-  );
-}
-
-//  Prevent updating mobile to null/blank if it already exists
-if (userData.mobile && (!body.mobile || body.mobile.trim() === '')) {
-  throw new HttpException(
-    {
-      statusCode: HttpStatus.BAD_REQUEST,
-      message: 'Mobile number cannot be empty or null because it already exists.',
-      error: 'InvalidMobileUpdate',
-    },
-    HttpStatus.BAD_REQUEST,
-  );
-}
-
-      const updatedUser = await this.userService.update(id, updateUserDto);
-
-      return {
-        statusCode: HttpStatus.OK,
-        message: 'User updated successfully',
-        data: plainToInstance(User, updatedUser),
-      };
-    } catch (error) {
-      this.logger.error(`Error updating user with id ${id}`, error.stack);
+    // Prevent updating email/mobile to null/blank if already set
+    if (userData.email && (!body.email || body.email.trim() === '')) {
       throw new HttpException(
         {
-          statusCode: error.status || HttpStatus.BAD_REQUEST,
-          message: error.message || 'Failed to update user',
-          error: error.name || 'Unknown error',
+          statusCode: HttpStatus.BAD_REQUEST,
+          message: 'Email cannot be empty or null because it already exists.',
+          error: 'InvalidEmailUpdate',
         },
-        error.status || HttpStatus.BAD_REQUEST,
+        HttpStatus.BAD_REQUEST,
       );
     }
+
+    if (userData.mobile && (!body.mobile || body.mobile.trim() === '')) {
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.BAD_REQUEST,
+          message: 'Mobile number cannot be empty or null because it already exists.',
+          error: 'InvalidMobileUpdate',
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    // Clean up email/mobile before passing to service
+    if (updateUserDto.email?.trim() === '') {
+      delete updateUserDto.email;
+    }
+    if (updateUserDto.mobile?.trim() === '') {
+      delete updateUserDto.mobile;
+    }
+
+    const updatedUser = await this.userService.update(id, updateUserDto);
+
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'User updated successfully',
+      data: plainToInstance(User, updatedUser),
+    };
+  } catch (error) {
+    this.logger.error(`Error updating user with id ${id}`, error.stack);
+    throw new HttpException(
+      {
+        statusCode: error.status || HttpStatus.BAD_REQUEST,
+        message: error.message || 'Failed to update user',
+        error: error.name || 'Unknown error',
+      },
+      error.status || HttpStatus.BAD_REQUEST,
+    );
   }
+}
 }

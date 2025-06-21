@@ -9,6 +9,8 @@ import * as bcrypt from 'bcrypt';
 import { UserService } from '../user/user.service';
 import { randomInt } from 'crypto';
 import { MailService } from 'src/mail/mail.service';
+import { plainToInstance } from 'class-transformer';
+import { User } from '../user/entities/user/user';
 
 @Injectable()
 export class AuthService {
@@ -214,11 +216,11 @@ async sendOtpAutoRegister(identifier: { email?: string; mobile?: string }) {
     isUser = true;
   } else {
     // Create user with provided info
-    user = await this.userService.create({
+ const createPayload: any = {};
+if (email && email.trim()) createPayload.email = email.trim();
+if (mobile && mobile.trim()) createPayload.mobile = mobile.trim();
 
-      email: email || '',
-      mobile: mobile || '',
-    });
+user = await this.userService.create(createPayload);
   }
 
   // Generate OTP
@@ -244,9 +246,11 @@ async sendOtpAutoRegister(identifier: { email?: string; mobile?: string }) {
     statusCode: 200,
     message: `OTP sent on ${email ? 'email address' : 'mobile number'}`,
     data: {
-      email: email || null,
-      mobile: mobile || null,
+      // email: email || null,
+      // mobile: mobile || null,
       isUser,
+      user: plainToInstance(User, user),
+   
     },
   };
 }

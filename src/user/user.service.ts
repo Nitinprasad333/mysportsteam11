@@ -17,9 +17,23 @@ async create(userData: {
   email?: string;
   mobile?: string;
 }): Promise<User> {
-  const user = this.userRepository.create(userData);
-  return this.userRepository.save(user);
+  const defaultUserFields: Partial<User> = {
+    name: '',
+    dob: '',
+    profilePicture: '',
+    bio: '',
+    country: '',
+    state: '',
+    address: '',
+    ...(userData.email ? { email: userData.email } : {}),
+    ...(userData.mobile ? { mobile: userData.mobile } : {}),
+  };
+
+  const user = this.userRepository.create(defaultUserFields);
+  return await this.userRepository.save(user);
 }
+
+
 
 // async update(id: number, updateData: Partial<User>): Promise<User> {
 //   await this.userRepository.update(id, updateData);
@@ -93,12 +107,22 @@ async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
   if (!user) {
     throw new NotFoundException(`User with id ${id} not found`);
   }
-  
 
-  Object.assign(user, updateUserDto); 
+  // Prevent overwriting email/mobile with empty strings if they exist
+  if (user.email && (updateUserDto.email === '' || updateUserDto.email === null || updateUserDto.email === undefined)) {
+    delete updateUserDto.email;
+  }
+
+  if (user.mobile && (updateUserDto.mobile === '' || updateUserDto.mobile === null || updateUserDto.mobile === undefined)) {
+    delete updateUserDto.mobile;
+  }
+
+  // Assign remaining properties
+  Object.assign(user, updateUserDto);
 
   return await this.userRepository.save(user);
 }
+
 
 
 }
