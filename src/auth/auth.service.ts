@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   BadRequestException,
   NotFoundException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -85,7 +86,7 @@ async verifyOtp(email: string, otp: string) {
 
    if (!user.name || user.name.trim() === '') {
     throw new BadRequestException(
-      'You are a first-time user. Please update your name'
+      'You are first-time user. Please update your name'
     );
   }
 
@@ -227,14 +228,17 @@ async sendOtpAutoRegister(identifier: { email?: string; mobile?: string }) {
     user = await this.userService.findByMobile(mobile);
   }
 
-  else {
-    // Create user with provided info
- const createPayload: any = {};
-if (email && email.trim()) createPayload.email = email.trim();
-if (mobile && mobile.trim()) createPayload.mobile = mobile.trim();
+  if (!user) {
+  const createPayload: any = {};
+  if (email && email.trim()) createPayload.email = email.trim();
+  if (mobile && mobile.trim()) createPayload.mobile = mobile.trim();
 
-user = await this.userService.create(createPayload);
-  }
+  user = await this.userService.create(createPayload);
+}
+
+if (!user || !user.id) {
+  throw new InternalServerErrorException('User creation failed.');
+}
 
   // Generate OTP
   const otp = randomInt(1000, 9999).toString();

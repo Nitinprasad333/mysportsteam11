@@ -44,7 +44,7 @@ export class UserController {
 
 
   //set user name by id
-  @UseGuards(AuthGuard('jwt'))
+// @UseGuards(AuthGuard('jwt'))
 @Patch(':id/setname')
 @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
 async setName(
@@ -53,12 +53,41 @@ async setName(
 ): Promise<ApiResponse<any>> {
   try {
     const user = await this.userService.findById(id);
+
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
 
-    user.name = setNameDto.name;
-    const updated = await this.userService.saveUser(user); // or reuse update()
+    const existingName = user.name?.trim();
+
+
+    if (existingName && existingName.length > 0) {
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.BAD_REQUEST,
+          message: 'Name already exist.Use update profile.',
+          error: 'NameAlreadySet',
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const newName = setNameDto.name?.trim();
+
+ 
+    if (!newName || newName.length === 0 && newName !== null && newName !== undefined) {
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.BAD_REQUEST,
+          message: 'Name must be a non-empty string',
+          error: 'InvalidName',
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    user.name = newName;
+    const updated = await this.userService.saveUser(user);
 
     return {
       statusCode: HttpStatus.OK,
@@ -77,6 +106,7 @@ async setName(
     );
   }
 }
+
 
 
 

@@ -1,12 +1,14 @@
 import { Controller, Get, Post, Body, HttpStatus, UseGuards, Request, HttpException, Logger,
-     Param, Delete, Query
+     Param, Delete, Query,
+     UseInterceptors
  } from '@nestjs/common';
 import { GamesService } from './games.service';
 import { CreateGameDto } from '../common/dto/gameDto/create-game.dto';
 import { ApiResponse } from 'src/common/interface/response.interface';
 import { Game } from './entities/game';
 import { AuthGuard } from '@nestjs/passport/dist/auth.guard';
-
+import { ContentTypeInterceptor } from 'src/common/interceptors/content-type.interceptor';
+@UseInterceptors(ContentTypeInterceptor)
 @Controller('games')
 export class GamesController {
   private readonly logger = new Logger(GamesController.name);
