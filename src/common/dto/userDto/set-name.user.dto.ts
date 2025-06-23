@@ -1,0 +1,10 @@
+
+import { IsNotEmpty, IsString } from 'class-validator';
+import { Transform } from 'class-transformer';
+
+export class SetNameDto {
+  @IsString()
+  @IsNotEmpty({ message: 'Name is required' })
+  @Transform(({ value }) => value.trim())
+  name: string;
+}
