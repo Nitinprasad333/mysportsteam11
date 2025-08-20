@@ -1,7 +1,18 @@
-import { Controller, Get, Post, Body, HttpStatus, UseGuards, Request, HttpException, Logger,
-     Param, Delete, Query,
-     UseInterceptors
- } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  HttpStatus,
+  UseGuards,
+  Request,
+  HttpException,
+  Logger,
+  Param,
+  Delete,
+  Query,
+  UseInterceptors,
+} from '@nestjs/common';
 import { GamesService } from './games.service';
 import { CreateGameDto } from '../common/dto/gameDto/create-game.dto';
 import { ApiResponse } from 'src/common/interface/response.interface';
@@ -15,10 +26,13 @@ export class GamesController {
 
   constructor(private readonly gamesService: GamesService) {}
 
-    /*   * Creates a new game */
+  /*Add New Game */
   @UseGuards(AuthGuard('jwt'))
   @Post()
-  async create(@Body() createGameDto: CreateGameDto, @Request() req): Promise<ApiResponse<Game>> {
+  async create(
+    @Body() createGameDto: CreateGameDto,
+    @Request() req,
+  ): Promise<ApiResponse<Game>> {
     try {
       const game = await this.gamesService.create(createGameDto);
       return {
@@ -39,85 +53,85 @@ export class GamesController {
     }
   }
 
-
-
-  /*   * Retrieves all games*/
-@Get()
-@UseGuards(AuthGuard('jwt'))
-async findAll(
-  @Query('page') page = 1,
-  @Query('limit') limit = 10,
-  @Query('sortBy') sortBy = 'createdAt',
-  @Query('sortOrder') sortOrder: 'asc' | 'desc' = 'desc',
-    @Query('search') search: string,
-  @Request() req
-): Promise<ApiResponse<{
-  items: Game[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}>> {
-  try {
-    const pageNum = parseInt(page as any, 10);
-    const limitNum = parseInt(limit as any, 10);
-
-    const { items, total } = await this.gamesService.findAll(
-      pageNum,
-      limitNum,
-      sortBy,
-      sortOrder,
-          search,
-    );
-
-    const message =
-      items.length === 0 ? 'No record found' : 'Games retrieved successfully';
-
-    return {
-      statusCode: HttpStatus.OK,
-      message,
-      data: {
-        items,
-        total,
-        page: pageNum,
-        limit: limitNum,
-        totalPages: Math.ceil(total / limitNum),
-      },
-    };
-  } catch (error) {
-    this.logger.error('Error retrieving games', error.stack);
-    throw new HttpException(
-      {
-        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: 'Failed to retrieve games',
-        error: error.message || 'Unknown error',
-      },
-      HttpStatus.INTERNAL_SERVER_ERROR,
-    );
-  }
-}
-
-    /*   * Deletes a game by ID */
+  /* Get All Games with pagination sort and search*/
+  @Get()
   @UseGuards(AuthGuard('jwt'))
-@Delete(':id')
-async remove(@Param('id') id: string): Promise<ApiResponse<null>> {
-  try {
-    await this.gamesService.remove(id);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Game deleted successfully',
-      data: null,
-    };
-  } catch (error) {
-    this.logger.error(`Error deleting game with id ${id}`, error.stack);
-    throw new HttpException(
-      {
-        statusCode: HttpStatus.BAD_REQUEST,
-        message: 'Failed to delete game',
-        error: error.message || 'Unknown error',
-      },
-      HttpStatus.BAD_REQUEST,
-    );
+  async findAll(
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+    @Query('sortBy') sortBy = 'createdAt',
+    @Query('sortOrder') sortOrder: 'asc' | 'desc' = 'desc',
+    @Query('search') search: string,
+    @Request() req,
+  ): Promise<
+    ApiResponse<{
+      items: Game[];
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    }>
+  > {
+    try {
+      const pageNum = parseInt(page as any, 10);
+      const limitNum = parseInt(limit as any, 10);
+
+      const { items, total } = await this.gamesService.findAll(
+        pageNum,
+        limitNum,
+        sortBy,
+        sortOrder,
+        search,
+      );
+
+      const message =
+        items.length === 0 ? 'No record found' : 'Games retrieved successfully';
+
+      return {
+        statusCode: HttpStatus.OK,
+        message,
+        data: {
+          items,
+          total,
+          page: pageNum,
+          limit: limitNum,
+          totalPages: Math.ceil(total / limitNum),
+        },
+      };
+    } catch (error) {
+      this.logger.error('Error retrieving games', error.stack);
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+          message: 'Failed to retrieve games',
+          error: error.message || 'Unknown error',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
-}
+
+  /*Delete Game */
+  @UseGuards(AuthGuard('jwt'))
+  @Delete(':id')
+  async remove(@Param('id') id: string): Promise<ApiResponse<null>> {
+    try {
+      await this.gamesService.remove(id);
+      return {
+        statusCode: HttpStatus.OK,
+        message: 'Game deleted successfully',
+        data: null,
+      };
+    } catch (error) {
+      this.logger.error(`Error deleting game with id ${id}`, error.stack);
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.BAD_REQUEST,
+          message: 'Failed to delete game',
+          error: error.message || 'Unknown error',
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
 }

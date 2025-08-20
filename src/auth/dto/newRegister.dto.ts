@@ -12,12 +12,12 @@ import {
   IsNotEmpty,
 } from 'class-validator';
 
-// Class-level validator to ensure at least one of email or mobile is provided
+/* Class-level validator to ensure at least one of email or mobile is provided */
 @ValidatorConstraint({ name: 'EitherEmailOrMobile', async: false })
 class EitherEmailOrMobileConstraint implements ValidatorConstraintInterface {
   validate(_: any, args: ValidationArguments) {
     const obj = args.object as any;
-    return !!(obj.email?.trim() || obj.mobile?.trim()); // must not be empty/blank
+    return !!(obj.email?.trim() || obj.mobile?.trim()); 
   }
 
   defaultMessage(args: ValidationArguments) {
@@ -49,5 +49,5 @@ export class newRegisterDto {
   mobile?: string;
 
   @EitherEmailOrMobile({ message: 'Either email or mobile number must be provided and cannot be blank' })
-  dummyField: string;
+  payloadfield: string;
 }

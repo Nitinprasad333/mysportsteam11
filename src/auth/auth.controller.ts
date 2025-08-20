@@ -9,47 +9,47 @@ import { ContentTypeInterceptor } from 'src/common/interceptors/content-type.int
 @UseInterceptors(ContentTypeInterceptor)
 @Controller('auth')
 export class AuthController {
-constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) {}
 
-// @Post('register')
-// async register(@Body() body:RegisterDto) {
-//     const response  = await this.authService.register(body);
-// return response;
-// }
+  // @Post('register')
+  // async register(@Body() body:RegisterDto) {
+  //     const response  = await this.authService.register(body);
+  // return response;
+  // }
 
+  /*Auto Register using email or mobile and get OTP*/
+  @Post('get-otp')
+  async getOTP(@Body() body: newRegisterDto) {
+    const response = await this.authService.sendOtpAutoRegister(body);
+    return response;
+  }
 
-@Post('get-otp')
-async register(@Body() body:newRegisterDto) {
-    const response  = await this.authService.sendOtpAutoRegister(body);
-return response;
-}
+  /* Send OTP to email for registration*/
+  @Post('send-otp')
+  async sendOtp(@Body('email') email: string) {
+    const response = await this.authService.sendOtp(email);
+    console.log('sendotp response', response);
+    return response;
+  }
 
-@Post('send-otp')
-async sendOtp(@Body('email') email: string) {
-  const response = await this.authService.sendOtp(email);
-  console.log("sendotp response", response);
-  return response;
-}
+  /* Resend OTP*/
+  @Post('resend-otp')
+  async resendOtp(@Body('email') email: string) {
+    const response = await this.authService.resendOtp(email);
+    console.log('resendOtp response', response);
+    return response;
+  }
 
-@Post('resend-otp')
-async resendOtp(@Body('email') email: string) {
-  const response = await this.authService.resendOtp(email);
-  console.log("resendOtp response", response);
-  return response;
-}
-
-@Post('verify-otp')
-async verifyOtp(@Body() body: { email: string; otp: string }) {
+  /* Verify OTP */
+  @Post('verify-otp')
+  async verifyOtp(@Body() body: { email: string; otp: string }) {
     const response = await this.authService.verifyOtp(body.email, body.otp);
-return response;
-}
+    return response;
+  }
 
-
-@Post('refresh-token')
-async refresh(@Body() dto: RefreshTokenDto) {
-  return this.authService.refreshToken(dto.refresh_token);
-}
-
-
-
+  /* Refresh Token*/
+  @Post('refresh-token')
+  async refresh(@Body() dto: RefreshTokenDto) {
+    return this.authService.refreshToken(dto.refresh_token);
+  }
 }

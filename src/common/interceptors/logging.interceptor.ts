@@ -21,7 +21,7 @@ export class LoggingInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap((data) => {
         this.logger.log(
-          `✅ ${method} ${url} - ${Date.now() - now}ms - Success - Response: ${JSON.stringify(data)}`,
+          `${method} ${url} - ${Date.now() - now}ms - Success - Response: ${JSON.stringify(data)}`,
         );
       }),
       catchError((err) => {
@@ -30,7 +30,7 @@ export class LoggingInterceptor implements NestInterceptor {
           err?.response?.message || err?.message || 'Internal server error';
 
         this.logger.error(
-          `❌ ${method} ${url} - ${Date.now() - now}ms - Failed - Status: ${statusCode} - Error: ${JSON.stringify(message)}`,
+          `${method} ${url} - ${Date.now() - now}ms - Failed - Status: ${statusCode} - Error: ${JSON.stringify(message)}`,
         );
 
         return throwError(() => err);

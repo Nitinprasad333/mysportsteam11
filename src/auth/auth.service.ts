@@ -21,7 +21,7 @@ export class AuthService {
     private mailService: MailService,
   ) {}
 
-  //Register a New User Service
+  /*Register a New User Service*/
   async register(data: {
     name: string;
     email: string;
@@ -41,7 +41,7 @@ export class AuthService {
     return this.userService.create(data);
   }
 
-  //Send OTP Service
+  /*Send OTP Service*/
   async sendOtp(email: string) {
     const user = await this.userService.findByEmail(email);
     if (!user) {
@@ -63,8 +63,7 @@ export class AuthService {
       otpExpiresAt: otpExpiresAt.toISOString(),
     });
 
-    
-    console.log(`OTP for ${email}: ${otp}`); 
+    console.log(`OTP for ${email}: ${otp}`);
     await this.mailService.sendOtpEmail(email, otp);
 
     return {
@@ -76,61 +75,61 @@ export class AuthService {
     };
   }
 
-  //Verify OTP Service
-async verifyOtp(email: string, otp: string) {
-  const user = await this.userService.findByEmail(email);
-  if (!user) {
-    throw new NotFoundException('User not found');
-    
+  /*Verify OTP Service*/
+  async verifyOtp(email: string, otp: string) {
+    const user = await this.userService.findByEmail(email);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (!user.name || user.name.trim() === '') {
+      throw new BadRequestException(
+        'You are first-time user. Please update your name',
+      );
+    }
+
+    if (!user.otp || !user.otpExpiresAt) {
+      throw new BadRequestException('OTP not requested');
+    }
+
+    // Compare hashed OTP using bcrypt
+    const isOtpValid = await bcrypt.compare(otp, user.otp);
+    if (!isOtpValid) {
+      throw new UnauthorizedException('Invalid OTP');
+    }
+
+    if (new Date(user.otpExpiresAt) < new Date()) {
+      throw new UnauthorizedException('OTP expired');
+    }
+
+    // Clear OTP after successful verification
+    await this.userService.update(user.id, {
+      otp: '',
+      otpExpiresAt: undefined,
+    });
+
+    // Create JWT payload and return token
+    const payload = { id: user.id, email: user.email };
+
+    const accessToken = this.jwtService.sign(payload);
+
+    const refreshToken = this.jwtService.sign(payload, {
+      expiresIn: process.env.JWT_EXPIRES_IN,
+    });
+
+    await this.userService.updateRefreshToken(user.id, refreshToken);
+
+    return {
+      statusCode: 200,
+      message: 'OTP verified successfully',
+      data: {
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      },
+    };
   }
 
-   if (!user.name || user.name.trim() === '') {
-    throw new BadRequestException(
-      'You are first-time user. Please update your name'
-    );
-  }
-
-  if (!user.otp || !user.otpExpiresAt) {
-    throw new BadRequestException('OTP not requested');
-  }
-
-  // Compare hashed OTP using bcrypt
-  const isOtpValid = await bcrypt.compare(otp, user.otp);
-  if (!isOtpValid) {
-    throw new UnauthorizedException('Invalid OTP');
-  }
-
-  if (new Date(user.otpExpiresAt) < new Date()) {
-    throw new UnauthorizedException('OTP expired');
-  }
-
-  // Clear OTP after successful verification
-  await this.userService.update(user.id, {
-    otp: '',
-    otpExpiresAt: undefined,
-  });
-
-  // Create JWT payload and return token
-  const payload = { id: user.id, email: user.email };
-
-  const accessToken = this.jwtService.sign(payload);
-
-  const refreshToken = this.jwtService.sign(payload, {
-    expiresIn: process.env.JWT_EXPIRES_IN,
-  });
-
-  await this.userService.updateRefreshToken(user.id, refreshToken);
-
-  return {
-    statusCode: 200,
-    message: 'OTP verified successfully',
-    data: {
-      access_token: accessToken,
-      refresh_token: refreshToken,
-    },
-  };
-}
-
+  /*Refresh token Service*/
   async refreshToken(oldToken: string) {
     try {
       const payload = this.jwtService.verify(oldToken);
@@ -170,6 +169,7 @@ async verifyOtp(email: string, otp: string) {
     }
   }
 
+  /*Resend OTP Service*/
   async resendOtp(email: string) {
     const user = await this.userService.findByEmail(email);
     if (!user) {
@@ -178,7 +178,7 @@ async verifyOtp(email: string, otp: string) {
 
     // Generate 6-digit OTP
     const otp = randomInt(100000, 999999).toString();
-        const hashedOtp = await bcrypt.hash(otp, 10);
+    const hashedOtp = await bcrypt.hash(otp, 10);
 
     // Set expiry 2 minutes from now
     const otpExpiresAt = new Date(Date.now() + 2 * 60 * 1000);
@@ -192,8 +192,8 @@ async verifyOtp(email: string, otp: string) {
     });
 
     // TODO: ReSend otp via email here
-  
-    console.log(`Resend OTP for ${email}: ${otp}`); 
+
+    console.log(`Resend OTP for ${email}: ${otp}`);
     await this.mailService.sendOtpEmail(email, otp);
 
     return {
@@ -201,83 +201,74 @@ async verifyOtp(email: string, otp: string) {
       message: 'OTP resent on email address',
       data: {
         email: email,
-         user: plainToInstance(User, user)
+        user: plainToInstance(User, user),
       },
     };
   }
 
+  /*Auto Register User and Send OTP Service*/
+  async sendOtpAutoRegister(identifier: { email?: string; mobile?: string }) {
+    const { email, mobile } = identifier;
 
+    // Ensure at least one identifier is provided
+    if (!email && !mobile) {
+      throw new BadRequestException(
+        'Either email or mobile number is required',
+      );
+    }
 
-async sendOtpAutoRegister(identifier: { email?: string; mobile?: string }) {
-  const { email, mobile } = identifier;
+    let user: any = null;
 
-  // Ensure at least one identifier is provided
-  if (!email && !mobile) {
-    throw new BadRequestException('Either email or mobile number is required');
+    // Check for existing user
+    if (email) {
+      user = await this.userService.findByEmail(email);
+    } else if (mobile) {
+      user = await this.userService.findByMobile(mobile);
+    }
+
+    if (!user) {
+      const createPayload: any = {};
+      if (email && email.trim()) createPayload.email = email.trim();
+      if (mobile && mobile.trim()) createPayload.mobile = mobile.trim();
+
+      user = await this.userService.create(createPayload);
+    }
+
+    if (!user || !user.id) {
+      throw new InternalServerErrorException('User creation failed.');
+    }
+
+    // Generate OTP
+    const otp = randomInt(1000, 9999).toString();
+    const hashedOtp = await bcrypt.hash(otp, 10);
+    const otpExpiresAt = new Date(Date.now() + 2 * 60 * 1000);
+
+    // Save OTP to user
+    await this.userService.update(user.id, {
+      otp: hashedOtp,
+      otpExpiresAt: otpExpiresAt.toISOString(),
+    });
+
+    // Send OTP
+    if (email) {
+      await this.mailService.sendOtpEmail(email, otp);
+    } else if (mobile) {
+      //will Implement SMS service here
+      console.log(`Send SMS OTP to ${mobile}: ${otp}`);
+      // await this.smsService.sendOtp(mobile, otp); (if using Twilio, etc.)
+    }
+
+    const isUser = !!(user.name && user.name.trim() !== '');
+
+    const transformedUser = plainToInstance(User, user);
+
+    return {
+      statusCode: 200,
+      message: `OTP sent on ${email ? 'email address' : 'mobile number'}`,
+      data: {
+        isUser,
+        user: transformedUser,
+      },
+    };
   }
-
-  let user: any = null;
-
-  
-
-
-  // Check for existing user
-  if (email) {
-    user = await this.userService.findByEmail(email);
-  } else if (mobile) {
-    user = await this.userService.findByMobile(mobile);
-  }
-
-  if (!user) {
-  const createPayload: any = {};
-  if (email && email.trim()) createPayload.email = email.trim();
-  if (mobile && mobile.trim()) createPayload.mobile = mobile.trim();
-
-  user = await this.userService.create(createPayload);
-}
-
-if (!user || !user.id) {
-  throw new InternalServerErrorException('User creation failed.');
-}
-
-  // Generate OTP
-  const otp = randomInt(1000, 9999).toString();
-  const hashedOtp = await bcrypt.hash(otp, 10);
-  const otpExpiresAt = new Date(Date.now() + 2 * 60 * 1000);
-
-  // Save OTP to user
-  await this.userService.update(user.id, {
-   otp: hashedOtp,
-    otpExpiresAt: otpExpiresAt.toISOString(),
-  });
-  
-
-  // Send OTP
-  if (email) {
-    await this.mailService.sendOtpEmail(email, otp);
-  } else if (mobile) {
-    //will Implement SMS service here
-    console.log(`Send SMS OTP to ${mobile}: ${otp}`);
-    // await this.smsService.sendOtp(mobile, otp); (if using Twilio, etc.)
-  }
-
-
-  
-  const isUser = !!(user.name && user.name.trim() !== '');
-
-
-const transformedUser = plainToInstance(User, user);
-
-  return {
-    statusCode: 200,
-    message: `OTP sent on ${email ? 'email address' : 'mobile number'}`,
-    data: {
-   isUser,
-      user: transformedUser,
-   
-    },
-  };
-}
-
-
 }
